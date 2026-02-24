@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$REPO_DIR/play-sound.sh punch.wav"
-          }
-        ]
-      }
-    ],
     "Notification": [
       {
         "matcher": "",
@@ -22,24 +11,13 @@
         ]
       }
     ],
-    "SessionStart": [
+    "Stop": [
       {
-        "matcher": "compact",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "$REPO_DIR/play-sound.sh vinyl-rewind.wav"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$REPO_DIR/play-sound.sh cash-register.mp3"
+            "command": "$REPO_DIR/play-sound.sh cinematic-boom.wav"
           }
         ]
       }
@@ -50,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$REPO_DIR/play-sound.sh cinematic-boom.wav"
+            "command": "$REPO_DIR/play-sound.sh cash-register.mp3"
           }
         ]
       }

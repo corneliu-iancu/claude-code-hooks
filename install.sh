@@ -18,17 +18,6 @@ fi
 HOOKS=$(cat <<EOF
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$REPO_DIR/play-sound.sh punch.wav"
-          }
-        ]
-      }
-    ],
     "Notification": [
       {
         "matcher": "",
@@ -40,24 +29,13 @@ HOOKS=$(cat <<EOF
         ]
       }
     ],
-    "SessionStart": [
+    "Stop": [
       {
-        "matcher": "compact",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "$REPO_DIR/play-sound.sh vinyl-rewind.wav"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$REPO_DIR/play-sound.sh cash-register.mp3"
+            "command": "$REPO_DIR/play-sound.sh cinematic-boom.wav"
           }
         ]
       }
@@ -68,7 +46,7 @@ HOOKS=$(cat <<EOF
         "hooks": [
           {
             "type": "command",
-            "command": "$REPO_DIR/play-sound.sh cinematic-boom.wav"
+            "command": "$REPO_DIR/play-sound.sh cash-register.mp3"
           }
         ]
       }

@@ -6,11 +6,9 @@ Sound effects for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 
 
 | Event | Trigger | Sound | Vibe |
 |---|---|---|---|
-| `PreToolUse` | Bash command | `punch.wav` | Punch before hitting the terminal |
 | `Notification` | Any notification | `heart-beat.mp3` | Claude needs your attention |
-| `SessionStart` | `/compact` resume | `vinyl-rewind.wav` | Rewinding context |
-| `PostToolUse` | Edit / Write | `cash-register.mp3` | Ka-ching — code delivered |
-| `TaskCompleted` | Task done | `cinematic-boom.wav` | Cinematic boom |
+| `Stop` | Response finished | `cinematic-boom.wav` | Claude is done, your turn |
+| `TaskCompleted` | Task done | `cash-register.mp3` | Ka-ching — task delivered |
 
 ## Install
 
