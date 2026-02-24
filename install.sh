@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Merges Claude Code sound hooks into ~/.claude/settings.json (non-destructive).
+# Merges Claude Code hooks into ~/.claude/settings.json (non-destructive).
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -50,6 +50,18 @@ HOOKS=$(cat <<EOF
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$REPO_DIR/session-notes-wrapper.sh",
+            "timeout": 60000
+          }
+        ]
+      }
     ]
   }
 }
@@ -60,5 +72,5 @@ EOF
 jq -s '.[0] * .[1]' "$SETTINGS" <(echo "$HOOKS") > "$SETTINGS.tmp" \
   && mv "$SETTINGS.tmp" "$SETTINGS"
 
-echo "Sound hooks installed into $SETTINGS"
+echo "Hooks installed into $SETTINGS"
 echo "Repo: $REPO_DIR"

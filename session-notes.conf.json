@@ -1,0 +1,8 @@
+{
+  "notes_path": "~/Documents/LLM Engineering Notes",
+  "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+  "aws_region": "us-west-2",
+  "min_transcript_messages": 4,
+  "max_transcript_chars": 80000,
+  "enabled": true
+}
