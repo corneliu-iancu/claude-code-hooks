@@ -1,1 +1,10 @@
-.DS_Store
+# Personal configuration overrides
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+
+# Any files with .local in the name
+*.local.*
+
+# Session data (if hooks create local files)
+.session-data/
+*.session
