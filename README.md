@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="Claude Code Configuration" width="100%">
+</p>
+
 # Claude Code Configuration
 
 A comprehensive Claude Code project configuration with hooks, skills, agents, and commands. Includes automatic session notes tracking with sound effects.
