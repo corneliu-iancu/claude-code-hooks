@@ -1,25 +1,24 @@
-# Claude Code Config
+# Global Rules
 
-Personal global Claude Code setup: sound notifications + automatic session notes via AWS Bedrock.
+## Git
 
-## Structure
+- Never amend commits unless explicitly asked.
+- Write concise commit messages — focus on "why", not "what".
+- Never force push to main/master.
 
-```
-install.sh                          # Merges hooks into ~/.claude/settings.json
-settings-template.json              # Hook definitions (reference copy)
-play-sound.sh                       # afplay wrapper
-sounds/                             # heart-beat.mp3, cinematic-boom.wav, cash-register.mp3
-.claude/hooks/
-  session-notes-wrapper.sh          # Captures stdin, backgrounds Python
-  session-notes.py                  # Parses transcript, calls Bedrock
-  session-notes.conf.json           # notes_path, model_id, enabled, etc.
-```
+## Workflow
 
-## How Install Works
+- Read files before editing — never propose changes to code you haven't seen.
+- Investigate errors before retrying — don't brute-force the same failing approach.
+- Ask before destructive operations (deleting files, dropping tables, resetting branches).
 
-`install.sh` deep-merges hook definitions into `~/.claude/settings.json` using `jq`. Hook commands reference this repo by absolute path.
+## Code
 
-## Hook Events
+- Prefer editing existing files over creating new ones.
+- Don't add comments, docstrings, or type annotations to code you didn't change.
+- Don't over-engineer — solve what was asked, nothing more.
 
-- **Notification** / **Stop** / **TaskCompleted** — play sounds via `play-sound.sh`
-- **SessionEnd** — runs `session-notes-wrapper.sh` to summarize the conversation
+## Verification
+
+- After writing code, run the project's test/lint/build commands before reporting done.
+- If no test commands are known, ask.
