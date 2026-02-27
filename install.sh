@@ -57,7 +57,7 @@ HOOKS=$(cat <<EOF
         "hooks": [
           {
             "type": "command",
-            "command": "$REPO_DIR/session-notes-wrapper.sh",
+            "command": "$REPO_DIR/.claude/hooks/session-notes-wrapper.sh",
             "timeout": 60000
           }
         ]
