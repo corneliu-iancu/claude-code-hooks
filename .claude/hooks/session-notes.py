@@ -1,11 +1,14 @@
 """
 Session notes generator for Claude Code.
 
-Reads a Claude Code JSONL transcript, summarizes it via Bedrock,
-and writes a markdown note into ~/Documents/Engineering Notes/<folder>/<filename>.md.
+Reads a Claude Code JSONL transcript, summarizes it via an LLM,
+and writes a markdown note into the configured notes directory.
 
 Invoked by session-notes-wrapper.sh on SessionEnd.
-Uses AWS_BEARER_TOKEN_BEDROCK for auth (same token Claude Code uses).
+Supports two providers:
+  - anthropic: uses ANTHROPIC_API_KEY (api.anthropic.com/v1/messages)
+  - bedrock:   uses AWS_BEARER_TOKEN_BEDROCK (Bedrock Converse API)
+Auto-detects provider from environment if not set in config.
 No external dependencies — stdlib only.
 """
 
@@ -253,8 +256,92 @@ def build_transcript_text(messages: list[dict]) -> str:
     return "\n\n---\n\n".join(lines)
 
 
-def call_bedrock(model_id: str, region: str, system_prompt: str, user_message: str) -> dict:
-    """Call Bedrock Converse API using bearer token auth (no boto3 needed)."""
+# ---------------------------------------------------------------------------
+# Provider abstraction
+# ---------------------------------------------------------------------------
+
+MODEL_MAP = {
+    "anthropic": {
+        "haiku": "claude-haiku-4-5-20251001",
+        "sonnet": "claude-sonnet-4-20250514",
+    },
+    "bedrock": {
+        "haiku": "anthropic.claude-haiku-4-5-20251001-v1:0",
+        "sonnet": "anthropic.claude-sonnet-4-20250514-v1:0",
+    },
+}
+
+
+def detect_provider() -> str:
+    """Auto-detect provider from available environment variables."""
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "anthropic"
+    if os.environ.get("AWS_BEARER_TOKEN_BEDROCK"):
+        return "bedrock"
+    raise RuntimeError(
+        "No API credentials found. Set ANTHROPIC_API_KEY or AWS_BEARER_TOKEN_BEDROCK."
+    )
+
+
+def resolve_model(model: str, provider: str) -> str:
+    """Resolve a friendly model name ('haiku', 'sonnet') to a provider-specific ID."""
+    if provider in MODEL_MAP and model in MODEL_MAP[provider]:
+        return MODEL_MAP[provider][model]
+    return model  # assume it's already a full model ID
+
+
+def parse_llm_json(output_text: str) -> dict:
+    """Parse JSON from LLM output, handling markdown code fences."""
+    text = output_text.strip()
+    if text.startswith("```"):
+        first_newline = text.index("\n")
+        text = text[first_newline + 1:]
+        if text.endswith("```"):
+            text = text[:-3].strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        print(f"  Failed to parse LLM output: {e}", file=sys.stderr)
+        print(f"  Output preview: {text[:500]}", file=sys.stderr)
+        raise
+
+
+def call_anthropic(model_id: str, system_prompt: str, user_message: str) -> str:
+    """Call Anthropic Messages API. Returns raw output text."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY not set")
+
+    url = "https://api.anthropic.com/v1/messages"
+    body = json.dumps({
+        "model": model_id,
+        "max_tokens": 8192,
+        "temperature": 0.2,
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": user_message}],
+    }).encode("utf-8")
+
+    req = urllib.request.Request(url, data=body, method="POST", headers={
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+    })
+
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            response = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Anthropic API {e.code}: {error_body}") from e
+
+    stop_reason = response.get("stop_reason", "unknown")
+    output_text = response["content"][0]["text"]
+    print(f"  Anthropic response: stop_reason={stop_reason}, output_length={len(output_text)}", file=sys.stderr)
+    return output_text
+
+
+def call_bedrock(model_id: str, region: str, system_prompt: str, user_message: str) -> str:
+    """Call Bedrock Converse API using bearer token auth. Returns raw output text."""
     bearer_token = os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
     if not bearer_token:
         raise RuntimeError("AWS_BEARER_TOKEN_BEDROCK not set")
@@ -286,24 +373,20 @@ def call_bedrock(model_id: str, region: str, system_prompt: str, user_message: s
 
     stop_reason = response.get("stopReason", "unknown")
     output_text = response["output"]["message"]["content"][0]["text"]
-
     print(f"  Bedrock response: stop_reason={stop_reason}, output_length={len(output_text)}", file=sys.stderr)
+    return output_text
 
-    # Extract JSON from response (handle markdown code fences)
-    text = output_text.strip()
-    if text.startswith("```"):
-        first_newline = text.index("\n")
-        text = text[first_newline + 1:]
-        if text.endswith("```"):
-            text = text[:-3].strip()
 
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as e:
-        # Log the first 500 chars of the response for debugging
-        print(f"  Failed to parse LLM output: {e}", file=sys.stderr)
-        print(f"  Output preview: {text[:500]}", file=sys.stderr)
-        raise
+def call_llm(provider: str, model_id: str, region: str,
+             system_prompt: str, user_message: str) -> dict:
+    """Route to the right provider and parse the JSON response."""
+    if provider == "anthropic":
+        output = call_anthropic(model_id, system_prompt, user_message)
+    elif provider == "bedrock":
+        output = call_bedrock(model_id, region, system_prompt, user_message)
+    else:
+        raise RuntimeError(f"Unknown provider: {provider}")
+    return parse_llm_json(output)
 
 
 def build_system_prompt(existing_folders: list[str], cwd: str, activity: dict) -> str:
@@ -515,10 +598,27 @@ def main():
             sys.exit(0)
 
         notes_path = os.path.expanduser(config["notes_path"])
-        model_id = config["model_id"]
-        region = config["aws_region"]
         min_messages = config.get("min_transcript_messages", 4)
         max_chars = config.get("max_transcript_chars", 80000)
+
+        # Resolve provider (auto-detect from env vars if not set)
+        provider_cfg = config.get("provider", "auto")
+        if provider_cfg == "auto":
+            provider = detect_provider()
+            print(f"[{now}] Auto-detected provider: {provider}", file=sys.stderr)
+        else:
+            provider = provider_cfg
+
+        # Resolve model: "model" (friendly name) takes precedence, fall back to legacy "model_id"
+        model = config.get("model")
+        if model:
+            model_id = resolve_model(model, provider)
+        elif config.get("model_id"):
+            model_id = config["model_id"]
+        else:
+            raise RuntimeError("No model configured. Set 'model' in session-notes.conf.json")
+
+        region = config.get("aws_region", "us-west-2")
 
         # 3. Parse transcript
         messages = parse_transcript(transcript_path, max_chars)
@@ -544,7 +644,7 @@ def main():
         # 6. Scan existing folders
         existing_folders = get_existing_folders(notes_path)
 
-        # 7. Build prompt and call Bedrock
+        # 7. Build prompt and call LLM
         system_prompt = build_system_prompt(existing_folders, cwd, activity)
         transcript_text = build_transcript_text(messages)
 
@@ -555,8 +655,8 @@ def main():
             f"<transcript>\n{transcript_text}\n</transcript>"
         )
 
-        print(f"[{now}] Calling Bedrock ({model_id}) with {total_messages} messages...", file=sys.stderr)
-        result = call_bedrock(model_id, region, system_prompt, user_message)
+        print(f"[{now}] Calling {provider} ({model_id}) with {total_messages} messages...", file=sys.stderr)
+        result = call_llm(provider, model_id, region, system_prompt, user_message)
 
         # 8. Check if LLM says skip
         if result.get("skip", False):

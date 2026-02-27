@@ -61,13 +61,14 @@ Session notes are configured in `.claude/hooks/session-notes.conf.json`:
 | Key | Default | Description |
 |-----|---------|-------------|
 | `notes_path` | `~/Documents/LLM Engineering Notes` | Where notes are written |
-| `model_id` | `anthropic.claude-haiku-4-5-*` | Bedrock model for summarization |
-| `aws_region` | `us-west-2` | AWS region |
+| `model` | `haiku` | Model name (`haiku`, `sonnet`, or a full model ID) |
+| `provider` | `auto` | `auto`, `anthropic`, or `bedrock` |
+| `aws_region` | `us-west-2` | AWS region (only used when provider is `bedrock`) |
 | `min_transcript_messages` | `4` | Skip sessions shorter than this |
 | `max_transcript_chars` | `120000` | Truncate long transcripts |
 | `enabled` | `true` | Kill switch |
 
-To change the summarization model, edit the `model_id` value in that file directly.
+Provider auto-detection checks for `ANTHROPIC_API_KEY` first, then `AWS_BEARER_TOKEN_BEDROCK`.
 
 ## Customization
 
@@ -79,7 +80,7 @@ To change the summarization model, edit the `model_id` value in that file direct
 
 - **macOS** — sounds use `afplay`
 - **`jq`** — used by `install.sh` to merge JSON (`brew install jq`)
-- **AWS Bedrock credentials** — for session notes summarization
+- **Anthropic API key or AWS Bedrock credentials** — for session notes summarization
 
 ## License
 
